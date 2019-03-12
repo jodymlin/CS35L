@@ -1,0 +1,301 @@
+Kathy Daniels
+404887687
+Assignment 7
+Laboratory
+--------------
+
+1.
+
+I first wrote a simple c program called cos.c that computes
+and prints cos(sqrt(3.0)):
+
+#include <stdio.h>
+#include <math.h>
+
+int main() {
+  double x = cos(sqrt(3.0));
+  printf("%.17g\n",x);
+}
+
+I compiled and ran this trivial program on the SEASnet server:
+
+  $ gcc -o cos cos.c
+  $ ./cos
+  -0.1605565385746905
+
+--------------
+
+2.
+
+I used the ldd command to then see which dynamic libraries
+my trivial program cos uses:
+
+  $ ldd cos
+  linux-vdso.so.1 =>  (0x00007ffdd3fc8000)
+  libc.so.6 => /lib64/libc.so.6 (0x00007f8abf3bc000)
+  /lib64/ld-linux-x86-64.so.2 (0x00007f8abf789000)
+
+The output reveals that the program uses the linux-vdso.so.1,
+libc.so.6, and ld-linux-x86-64.so.2 libraries.
+
+--------------
+
+3. 
+
+I used strace to examine which system calls the program makes:
+
+  $ strace ./cos
+  
+Examining the lengthy output, I could see that the program calls
+open, close, access, fstat, mmap, read, and mprotect. I now
+examine smaller sections of the output and evaluate how they
+relate to dynamic linking:
+
+--------------
+access("/etc/ld.so.preload", R_OK)      = -1 ENOENT (No such file or directory)
+open("/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=168106, ...}) = 0
+mmap(NULL, 168106, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7fe6fa4e3000
+close(3)
+--------------
+This section of the output loads the dynamic library ld.so
+which helps the program find, load, and run shared libraries needed
+by the program so it can handle dynamic linking. Calls to open,
+read, access, fstat, and mmap are made to accomplish this.
+
+--------------
+open("/lib64/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\340$\2\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=2151672, ...}) = 0
+mmap(NULL, 3981792, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7fe6f9f20000
+mprotect(0x7fe6fa0e2000, 2097152, PROT_NONE) = 0
+mmap(0x7fe6fa2e2000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1c2000) = 0x7fe6fa2e2000
+mmap(0x7fe6fa2e8000, 16864, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fe6fa2e8000
+close(3)
+--------------
+This section of the output opens and loads the dynamic library libc.so.6,
+making calls to open, read, fstat, mmap, and mprotect to do so.
+
+The remaining portions of the output carry out the actual execution
+of the program. For example, write is called to execute the printf
+statement present in the program:
+
+write(1, "-0.16055653857469052\n", 21-0.16055653857469052
+)  = 21
+
+OVERVIEW OF SYSTEM CALLS:
+Calling 'access' on a dynamic library checks whether the program has
+permission to access the library. Calling 'open' opens the library,
+then calls to 'read' and 'fstat' give us information about the library.
+Calling 'mmap' creates a mapping between an address space and the
+library, and 'mprotect' changes access protections. Lastly, calling
+'close' closes the library file.
+
+--------------
+
+4.
+
+I ran the following shell command next using my student ID
+to investigate some more commands:
+
+  $ ls /usr/bin | awk 'NR%101==404887687%101'
+  apr-1-config
+  cat
+  config_data
+  db_checkpoint
+  dvi2fax
+  find
+  ghci
+  grub2-file
+  gzip
+  imsettings-reload
+  kabcclient
+  kquitapp
+  licensecheck
+  mapscrn
+  ndisasm
+  nspr-config
+  pamdepth
+  pbm2ppa
+  pgmbentley
+  pmie
+  poclean
+  ppmtowinicon
+  rct
+  rpmls
+  sha256sum
+  stty
+  tgatoppm
+  valgrind-di-server
+  xfreerdp
+  yuy2topam
+
+--------------
+
+5.
+
+I invoked ldd on each command that was output to examine
+what dynamic libraries each used. Every command except the
+following produced errors:
+
+  $ ldd /usr/bin/apr-1-config
+  $ ldd /usr/bin/config_data
+  $ ldd /usr/bin/dvi2fax
+  $ ldd /usr/bin/ghci
+  $ ldd /usr/bin/licensecheck
+  $ ldd /usr/bin/nspr-config
+  $ ldd /usr/bin/poclean
+  $ ldd /usr/bin/rct
+  $ ldd /usr/bin/rpmls
+
+These commands all produced the same error: 'not a dynamic executable'.
+When I used emacs to examine the contents of each of these files,
+I found out that the error was due to the fact that the files are
+scripts, NOT executables files. Therefore, they cannot be compiled and
+dynamically linked.
+
+apr-1-config, dvi2fax, ghci, nspr-config, and rpmls are all bash
+scripts since their files began with '#!/bin/sh'.
+
+config_data are licensecheck are perl scripts since their files
+began with '#!/usr/bin/perl'.
+
+poclean and rct are python scripts since their files began with
+'#!/usr/bin/python'.
+
+--------------
+
+6. 
+
+To obtain a sorted list of all the dynamic libraries used by
+any of the commands on my list (ommitting duplicates), I created
+a script called sortlibraries.sh with the following contents:
+
+#!/bin/sh
+
+for i in $(ls /usr/bin | awk 'NR%101==404887687%101')
+do
+   ldd '/usr/bin/'$i
+done
+
+I then used grep and sort to simplify the extensive output
+so that only library names would be listed, sorted, and output.
+I made sure to delete what came after '=>' including
+addresses, and used the -u flag to ignore duplicates:
+
+  $ ./sortlibraries.sh | grep so | sed "s/[=][>].*//g" |
+    sed "s/[(][^)]*[)]//g" | sort -u
+
+    /lib64/ld-linux-x86-64.so.2 
+    libacl.so.1 
+    libattica.so.0.4 
+    libattr.so.1 
+    libavahi-client.so.3 
+    libavahi-common.so.3 
+    libblkid.so.1 
+    libbz2.so.1 
+    libcap.so.2 
+    libcom_err.so.2 
+    libcrypto.so.10 
+    libcrypt.so.1 
+    libc.so.6 
+    libdb-5.3.so 
+    libdbus-1.so.3 
+    libdbusmenu-qt.so.2 
+    libdevmapper.so.1.02 
+    libdl.so.2 
+    libdw.so.1 
+    libelf.so.1 
+    libexpat.so.1 
+    libfam.so.0 
+    libffi.so.6 
+    libfontconfig.so.1 
+    libfreebl3.so 
+    libfreerdp-cache.so.1.0 
+    libfreerdp-channels.so.1.0 
+    libfreerdp-codec.so.1.0 
+    libfreerdp-core.so.1.0 
+    libfreerdp-gdi.so.1.0 
+    libfreerdp-kbd.so.1.0 
+    libfreerdp-rail.so.1.0 
+    libfreerdp-utils.so.1.0 
+    libfreetype.so.6 
+    libgcc_s.so.1 
+    libgcrypt.so.11 
+    libgio-2.0.so.0 
+    libglib-2.0.so.0 
+    libgmodule-2.0.so.0 
+    libgobject-2.0.so.0 
+    libgpg-error.so.0 
+    libgssapi_krb5.so.2 
+    libgthread-2.0.so.0 
+    libICE.so.6 
+    libimsettings.so.5 
+    libk5crypto.so.3 
+    libkabc.so.4 
+    libkdecore.so.5 
+    libkdeui.so.5 
+    libkeyutils.so.1 
+    libkio.so.5 
+    libkrb5.so.3 
+    libkrb5support.so.0 
+    libkresources.so.4 
+    liblz4.so.1 
+    liblzma.so.5 
+    libmount.so.1 
+    libm.so.6 
+    libnepomukquery.so.4 
+    libnepomuk.so.4 
+    libnepomukutils.so.4 
+    libnetpbm.so.11 
+    libnspr4.so 
+    libnss3.so 
+    libnssutil3.so 
+    libpcp.so.3 
+    libpcre.so.1 
+    libplc4.so 
+    libplds4.so 
+    libpng15.so.15 
+    libpthread.so.0 
+    libqca.so.2 
+    libQtCore.so.4 
+    libQtDBus.so.4 
+    libQtGui.so.4 
+    libQtNetwork.so.4 
+    libQtSvg.so.4 
+    libQtXml.so.4 
+    libresolv.so.2 
+    librt.so.1 
+    libsasl2.so.3 
+    libselinux.so.1 
+    libsepol.so.1 
+    libSM.so.6 
+    libsolid.so.4 
+    libsopranoclient.so.1 
+    libsoprano.so.4 
+    libssl3.so 
+    libssl.so.10 
+    libstdc++.so.6 
+    libstreamanalyzer.so.0 
+    libstreams.so.0 
+    libsystemd.so.0 
+    libudev.so.1 
+    libuuid.so.1 
+    libX11.so.6 
+    libXau.so.6 
+    libxcb.so.1 
+    libXcursor.so.1 
+    libXext.so.6 
+    libXfixes.so.3 
+    libXft.so.2 
+    libXinerama.so.1 
+    libXi.so.6 
+    libxkbfile.so.1 
+    libxml2.so.2 
+    libXpm.so.4 
+    libXrandr.so.2 
+    libXrender.so.1 
+    libXtst.so.6 
+    libXv.so.1 
+    libz.so.1 
+    linux-vdso.so.1

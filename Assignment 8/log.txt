@@ -1,0 +1,199 @@
+Kathy Daniels
+404887687
+Assignment 8
+Laboratory
+--------------
+======
+SET UP
+======
+
+I started by connecting my BeagleBone to my computer using the USB cable.
+
+Once I found BEAGLEBONE as an external storage device, I opened it
+and clicked the "START.htm" file. This led me to a webpage located
+on the BeagleBone that led me through instructions on what drivers to
+download.
+
+After I restarted my computer, I used the following command to ssh
+into my BeagleBone:
+
+  $ sudo ssh root@192.168.7.2
+  Password:
+
+Once successfully SSHing into my BeagleBone, I connected it to wifi
+by executing the following commands:
+
+  # sudo connmanctl
+  # enable wifi
+  # scan wifi
+  # services
+  # agent on
+
+I then connected to the lab's wifi, entered the given password, and ran
+quit to exit.
+
+==========
+IP ADDRESS
+==========
+
+To find the IP address of my BeagleBone, I ran the following:
+
+  # ifconfig
+
+SoftAp0   Link encap:Ethernet  HWaddr 40:bd:32:e4:7c:10  
+          inet addr:192.168.8.1  Bcast:192.168.8.255  Mask:255.255.255.0
+          inet6 addr: fe80::42bd:32ff:fee4:7c10/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:95 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:0 (0.0 B)  TX bytes:25038 (24.4 KiB)
+
+lo        Link encap:Local Loopback  
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+          RX packets:1045 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:1045 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1 
+          RX bytes:87205 (85.1 KiB)  TX bytes:87205 (85.1 KiB)
+
+usb0      Link encap:Ethernet  HWaddr 40:bd:32:e4:7c:12  
+          inet addr:192.168.7.2  Bcast:192.168.7.255  Mask:255.255.255.0
+          inet6 addr: fe80::42bd:32ff:fee4:7c12/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:3474 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:2171 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:298671 (291.6 KiB)  TX bytes:530439 (518.0 KiB)
+
+wlan0     Link encap:Ethernet  HWaddr 2c:f7:f1:06:79:0b  
+          inet addr:10.97.85.209  Bcast:10.97.85.255  Mask:255.255.255.0
+          inet6 addr: fe80::2ef7:f1ff:fe06:790b/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST DYNAMIC  MTU:1500  Metric:1
+          RX packets:4293 errors:0 dropped:10 overruns:0 frame:0
+          TX packets:1497 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000 
+          RX bytes:756954 (739.2 KiB)  TX bytes:241593 (235.9 KiB)
+
+Looking under the network interface "wlan0", we can see that my
+IP address is 10.97.85.209. I gave this to my partner so she could
+later ssh into my BeagleBone.
+
+============
+SERVER STEPS
+============
+
+I started by generating public and private keys:
+
+  $ ssh-keygen
+
+Generating public/private rsa key pair.
+Enter file in which to save the key (/root/.ssh/id_rsa): 
+Created directory '/root/.ssh'.
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again: 
+Your identification has been saved in /root/.ssh/id_rsa.
+Your public key has been saved in /root/.ssh/id_rsa.pub.
+The key fingerprint is:
+9c:14:da:fd:ee:61:73:c2:8d:53:c5:0d:27:38:e0:92 root@beaglebone
+The key's randomart image is:
++---[RSA 2048]----+
+|        . .. .o .|
+|       o =  o  =.|
+|      . E o  .  +|
+|       o o .   . |
+|        S   . .  |
+|           o +   |
+|            X o  |
+|           o *   |
+|            .    |
++-----------------+
+
+I created an account for my partner (the client) on the server:
+
+  $ sudo useradd -d /home/nik -m nik
+  $ sudo passwd nik
+
+The password I set was: password
+I then created a .ssh directory for my partner:
+
+  $ cd /home/nik
+  $ sudo mkdir .ssh
+
+I changed ownership and permission on the .ssh directory so that
+it could be read, written and executed by my partner:
+
+  $ sudo chown -R nik .ssh
+  $ sudo chmod 700 .ssh
+
+Once the server was set up and my partner had my IP address, she
+performed all the following client steps and we switched roles.
+
+============
+CLIENT STEPS
+============
+
+After my partner finished completing all the same steps that I did
+above, she gave me her IP address so I could SSH into her BeagleBone.
+
+I started by generating public and private keys once again:
+
+  $ ssh-keygen
+
+I then copied my public key to the server for key-based authentication
+(/root/.ssh/authorized_keys):
+
+  $ ssh-copy-id -i kathy@10.97.85.205
+
+Then I added the private key to the authentication agent:
+
+  $ eval $(ssh-agent)
+  $ ssh-add
+
+Once everything was finally set up, I SSHed into my partner's BeagleBone:
+
+  $ ssh kathy@10.97.85.205
+
+Once connected to the server, I created a test file to see if my
+partner would be able to view or access the file on her BeagleBone:
+
+  $ nano test.txt
+
+After inputting some random characters and saving the file, my partner
+confirmed that she was able to see the file, showing us that the
+connection between server and client was successfully working.
+
+==============
+X11 FORWARDING
+==============
+
+Next, I wanted to try trusted port forwarding. Logging out of my partner's
+BeagleBone and then my own, I re-SSHed into my onto my BeagleBone
+with X11 forwarding and SSHed into my partner's BeagleBone with X11
+forwarding as well:
+
+  $ sudo ssh -X root@192.168.7.2
+  $ ssh -X kathy@10.97.85.205
+
+I then tried running firefox:
+
+  $ firefox
+
+The firefox browser came up successfully on my laptop!
+
+Lastly, I wanted to try trusted X11 forwarding using the -Y flag instead.
+I had to again log out of my BeagleBone and my partner's and re-SSH
+onto them with the following commands:
+
+  $ sudo ssh -Y root@192.168.7.2
+  $ ssh -Y kathy@10.97.85.205
+
+I ran firefox again on the server and the browser came up
+successfully once again! Although there were no obvious differences
+between the two procedures (besides changing the flags) and results,
+using trusted forwarding (-Y) could open security issues since it 
+causes the remote machine to be treated as a trusted client. Other
+clients could steal data from the remote machine or even alter data.
+In contrast, using unstrusted forwarding would cause an error to
+pop up if any commands violate a security setting.

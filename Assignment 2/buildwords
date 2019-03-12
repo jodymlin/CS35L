@@ -1,0 +1,30 @@
+#! /bin/bash
+
+# buildwords
+# automate systematic rules used to extract 
+# hawaiian words from table dictionary
+
+# search for lines containing Hawaiian words
+grep -E '<td>.+</td>' $@ |
+sed '1~2d' |
+
+# remove all tags
+sed 's/<[^>]*>//g' |
+
+# treat ASCII grave accent like ASCII apostrophe
+sed "s/\`/\'/g" |
+
+# treat upper case letters like lower case letters
+tr [:upper:] [:lower:] |
+
+# treat entries with spaces/commas as multiple words
+tr ',' '\n' | tr ' ' '\n' |
+
+# delete all leftover white spaces
+sed '/^$/d' |
+
+# check for non-Hawaiian letters
+sed "/[^pk/'mnwlhaeiou]/d" |
+
+# sort list of words & remove duplicates
+sort -u

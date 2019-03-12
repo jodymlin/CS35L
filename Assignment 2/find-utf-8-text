@@ -1,0 +1,9 @@
+#! /bin/bash
+# Kathy Daniels
+# 404887687
+# find-utf-8-text
+                                                                
+export LC_ALL=en_US.utf8
+  
+# recursively find files that match the specified byte range
+find $@ -type f -exec grep -Pl "[^\x01-\x7F]" '{}' +

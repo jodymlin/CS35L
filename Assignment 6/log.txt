@@ -1,0 +1,88 @@
+Kathy Daniels
+404887687
+Assignment 6
+--------------
+
+I first verified that I was using a new enough version
+of GNU sort:
+
+   $ sort --version
+
+   sort (GNU coreutils) 8.22
+
+The output showed me that I have version 8.22 which is a
+new enough version.
+
+--------------
+
+Next, I investigated how well the multithreaded sort
+command works. I first generated a file with 2^24 random
+single precision floating point numbers with the od command:
+
+   $ cat /dev/urandom | od -A n -t fF -N $(((2**24)*4)) |
+     tr -s ' ' '\n' | sed '/^$/d' > numbers.txt
+
+A breakdown of each command is as follows:
+
+   cat /dev/urandom : 
+   Acts as a pseudo-random number generator
+   
+   od -A n -t fF -N $(((2**24)*4)) :
+   The -A option specifies address format, so I used n for none
+   The -t fF option specifies the output format as floats
+   The -N (((2**24)*4)) option limits dump to 16777216 bytes
+
+   tr -s ' ' '\n' :
+   Replaces all spaces with new lines
+
+   sed '/^$/d' :
+   Removes all extra or empty lines
+
+--------------
+
+To measure the performance of sort, I used time -p to time the
+command and sent the output to /dev/null:
+
+   $ time -p sort -g numbers.txt > /dev/null
+   real 46.99
+   user 233.14
+   sys 7.07
+
+--------------
+
+I then inoked sort with the --parallel and -g options, running
+the command with 1, 2, 4, and 8 threads and timing each:
+
+   $ time -p sort -g --parallel=1 numbers.txt > /dev/null
+   real 190.24
+   user 188.64
+   sys 1.57
+
+   $ time -p sort -g --parallel=2 numbers.txt > /dev/null
+   real 100.22
+   user 188.42
+   sys 1.62
+
+   $ time -p sort -g --parallel=4 numbers.txt > /dev/null
+   real 59.90
+   user 196.16
+   sys 2.73
+
+   $ time -p sort -g --parallel=8 numbers.txt > /dev/null
+   real 37.95
+   user 202.40
+   sys 3.10
+
+--------------
+
+Examining the resulting times for each invocation, it becomes
+clear that as the thread count increases, the performance of
+sort also drastically increases! For every time we doubled the
+thread count, the time decreased by nearly half the previous
+run time.
+
+Looking back to the first time I invoked the sort command, without
+using the --parallel option, the performance was very similar to
+when it was invoked with the --parallel=8 option. This demonstrates
+that, even when not specified, the sort command already runs
+using multithreading by default, utilizing all available processors!

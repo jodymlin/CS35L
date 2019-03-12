@@ -1,0 +1,69 @@
+Kathy Daniels
+404887687
+Assignment 3
+Questions
+-------------
+
+Q1: Does the patch improve the performance of ls or make it worse? 
+
+The patch removes an if statement from the ls.c file as seen
+from the following section of the diff file:
+
+         case 'A':
+-          if (ignore_mode == IGNORE_DEFAULT)
+-            ignore_mode = IGNORE_DOT_AND_DOTDOT;
++          ignore_mode = IGNORE_DOT_AND_DOTDOT;
+           break;
+
+This speeds up execution time because there are now less instructions
+for the computer to execute. The patch also ensures that the -a option
+doesn't always override the -A option anymore, improving performance
+regarding that specific behavior.
+
+-------------
+
+Q2: If your company adopts thispatched version of Coreutils,
+    what else should you watch out for? Might this new version
+    introduce other problems with your application?
+
+We must be careful to distinguish between the order of flags. In other
+words, paying special attention to the different between -a -A and -A -a.
+After applying the patch, they do different things unlike previously
+when it didn't matter what order they were typed.
+
+-------------
+
+Q3: What happens when this script is invoked on an empty file
+    like /dev/null and why?
+
+I recieved the following error when running the script on /dev/null:
+
+  IndexError: list index out of range
+
+This is because the script attempts the following line of code:
+
+  return seq[int(self.random() * len(seq))]
+     
+It raises an error because seq[0] is called on an empty file so
+it falls out of bounds since there are no lines in the file to select.
+However, if I were to invoke the script with an argument of 0,
+no error would occur since no lines are attempted to be read.
+
+-------------
+
+Q4: What happens when this script is invoked with Python 3 rather
+    than Python 2, and why?
+
+When I invoke the script using python3 instead of python, I recieved
+the following error message:
+
+  File "randline.py", line 65
+    except IOError as (errno, strerror):
+                      ^
+  SyntaxError: invalid syntax
+
+The exception provides a 2-tuple detailing a numerical error code,
+errno, along with a string explaining the error itself, strerror.
+Python 2 exceptions are iterable, meaning you can iterate over
+parameters passed to the exception. Python 3 does not support
+tuples in error statements which leads to the syntax error shown.

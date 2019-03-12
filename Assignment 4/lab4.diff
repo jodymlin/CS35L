@@ -1,0 +1,22 @@
+2019-02-09  Kathy Douangpanya Daniels  <kathy@lnxsrv09.seas.ucla.edu>
+
+        * timespec.h (timespec_cmp): Replaced subtraction between
+        integers with direct comparison to avoid overflow causing
+        unwanted behavior in the program. Return 1 or -1 depending
+        on whether one timestamp is larger than the other and
+        return the difference in nanoseconds if the seconds are
+        evaluated to be equal.
+
+--- lib/timespec.h	2019-02-07 16:52:33.944463000 -0800
++++ lib/timespec.h	2019-02-07 16:54:30.070253000 -0800
+@@ -45,8 +45,8 @@
+ static inline int
+ timespec_cmp (struct timespec a, struct timespec b)
+ {
+-  int diff = a.tv_sec - b.tv_sec;
+-  return diff ? diff : a.tv_nsec - b.tv_nsec;
++  int diff = a.tv_nsec - b.tv_nsec;
++  return (a.tv_sec > b.tv_sec) ? 1 : (a.tv_sec < b.tv_sec) ? -1 : diff;
+ }
+
+ # if ! HAVE_DECL_NANOSLEEP

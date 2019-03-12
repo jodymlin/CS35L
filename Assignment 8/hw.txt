@@ -1,0 +1,51 @@
+Kathy Daniels
+404887687
+Assignment 8
+Homework
+--------------
+
+1.
+
+If other teams really had been observing all the bytes going across
+the network, the resulting network would still be secure. This is 
+because secure shell (SSH) is encrypted and operates securely, meaning
+that data going across the network is protected and may only be
+decrypted and accessed by the server or client. 
+
+(1)
+
+The network would still remain secure even if other teams had also
+tapped our keyboards after completing the client-server setup
+since we successfully accomplished password-free authentication,
+preventing other teams from obtaining the keystrokes to our passwords.
+
+However, had we not accomplished password-free access using our public
+and private keys, we would have had to type our passwords each time,
+thereby giving other teams access to our password keystrokes!
+
+(2) 
+
+The network would no longer be secure if other teams had temporary
+physical control of the USB since they could obtain access to the
+.ssh file we created, therefore revealing our private key. If they
+were to access this information, they would then be able to log onto
+the server (assuming password-free authentication is still enabled).
+
+--------------
+
+2.
+
+The gpg2 --verify command doesn't really verify that I personally
+created the file in question because it only compares the file
+with a detached signature to see if they match. This becomes a
+serious problem if an attacker manages to create a separate detached
+signature after tampering with private data. In this case, the
+verify command would then still verify that the file and
+signature match, but not WHO signed the files.
+
+To fix this issue, a third party could be utilized. Certificate
+Authority (CA) issues digital certificates that cerify the
+ownership of a public key by the specific named subject of the
+certificate. Therefore, if I were to supply them with my public key,
+they would be able to verify signatures concerning the private key
+that corresponds to the certified public key.

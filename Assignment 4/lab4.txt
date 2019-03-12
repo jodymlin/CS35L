@@ -1,0 +1,252 @@
+Kathy Daniels
+404887687
+Assignment 4
+Lab
+--------------
+
+I started by downloading the old version of coreutils with the
+buggy ls program and unzipping it:
+
+   $ wget https://web.cs.ucla.edu/classes/winter19/cs35L/
+      	  assign/coreutils-with-bug.tar.gz
+   $ tar -xzvf coreutils-with-bug.tar.gz
+
+Then I created a directory named coreutilsBuggy in my home directory
+in which I will install the buggy version of coreutils:
+
+   $ mkdir ~/coreutilsBuggy
+
+I navigated into the coreutils-with-bug direcrory and ran the
+configure script using the prefix flag so it would be installed
+in the ~/coreutilsBuggy directory:
+
+   $ cd coreutils-with-bug
+   $ emacs INSTALL
+   $ ./configure --prefix=/u/ee/ugrad/kathy/coreutilsBuggy
+
+When I ran 'make' and 'make install', I got the following error:
+
+   error: conflicting types for 'futimens'
+   int futimens (int, char const *, struct timespec const [2]);
+       ^
+
+As we can see, there were two different function declarations
+with the same name, which led to a compilation error.
+
+--------------
+
+I next downloaded and applied the renaming patch:
+
+   $ wget https://web.cs.ucla.edu/classes/winter19/cs35L/
+          assign/coreutils.diff
+   $ man patch
+   $ patch -p0 < coreutils.diff
+
+I used p0 to so that the file path would be unmodified in the
+patch code. I then ran the 'make' command again and it successfully
+executed:
+
+   $ make
+
+The patch was able to fix the errors because it changed every
+instance of the futimens function to coreutils_futimens and every
+instance of the tee function to coreutils_tee. Doing this
+prevented the conflicting types error to occur:
+
+   -  return futimens (-1, file, timespec);
+   +  return coreutils_futimens (-1, file, timespec);
+
+   -static bool tee (int nfiles, const char **files);
+   +static bool coreutils_tee (int nfiles, const char **files);
+
+--------------
+
+To reproduce the problem, I navigated to my coreutilsBuggy directory
+and ran the following commands detailed in the spec:
+
+   $ tmp=$(mktemp -d)
+   $ cd $tmp
+   $ touch -d '1918-11-11 11:00 GMT' wwi-armistice
+   $ touch now
+   $ sleep 1
+   $ touch now1
+   $ TZ=UTC0 ~/coreutils-with-bug/src/ls -lt --full-time wwi-armistice now now1
+
+The following output was produced:
+
+-rw-r--r-- 1 kathy eeugrad 0 1918-11-11 11:00:00.000000000 +0000 wwi-armistice
+-rw-r--r-- 1 kathy eeugrad 0 2019-02-07 19:38:09.059162428 +0000 now1
+-rw-r--r-- 1 kathy eeugrad 0 2019-02-07 19:38:03.997075516 +0000 now
+
+As we can see, the bug was reproduced because the oldest file,
+wwi-armistice, was placed at the top, when it should be at the bottom.
+
+--------------
+
+To figure out what went wrong, I used gdb on the buggy ls program.
+
+   $ gdb ~/coreutils-with-bug/src/ls
+   
+Using 'info functions' to see a list of all defined functions used
+in ls.c, I identifed compare_mtime' as potential candidate and set
+a breakpoint there:
+ 
+   (gdb) info functions
+   (gdb) break compare_mtime
+   (gdb) r ~/$temp -lt
+
+Once I hit the breakpoint, I saw that compare_mtime calls another 
+function, cmp_mtime. I decided to step into the function:
+
+   (gdb) stepi
+
+I saw that cmp_mtime also calls another function, timespec_cmp
+and decided to step into that too:
+
+   (gdb) stepi
+   (gdb) list 49
+
+46  timespec_cmp (struct timespec a, struct timespec b)
+47  {
+48    int diff = a.tv_sec - b.tv_sec;
+49    return diff ? diff : a.tv_nsec - b.tv_nsec;
+50  }
+
+As we can see from the contents of the function, it subtracts
+two time values and returns either a postiive or negative
+value based on what the value of 'diff' is. I continued the program
+and examined 'diff' for each of the 3 files (now, now1, wwi-armistice):
+
+    (gdb) info locals
+    diff = 28483830
+    (gdb) stepi
+    (gdb) stepi
+    (gdb) info locals
+    diff = -18480010
+
+There seems to be a problem with diff at this point in the program.
+It is a very large negative number, but the difference between a file
+created today and a file created ~100 years ago should be positive.
+This is likely caused by overflow that occured during the subtraction.
+This issue makes sense since the amount of seconds in 100 years is
+too large a value to store into an integer, which can only hold up to
+a maximum value of 0x7FFFFFFF.
+
+To fix this problem, we can avoid subtraction entirely. To do this,
+we can simply just compare the two values directly and return more
+straightfoward values such as -1 or 1 based on the result.
+
+--------------
+
+To fix the source file, I want to create a new patch file lab4.diff
+containing my coreutils fixes. I started by making a copy of the file
+that contained the definition of the timespec_cmp function. I found
+this while stepping through the debugger, in the following line:
+
+    timespec_cmp (b=..., a=...) at ../lib/timespec.h:49
+
+As you can see, timestamp.h contains the definition. I proceeded
+with the following commands:
+
+    $ cd ~/coreutils-with-bug
+    $ cp lib/timespec.h timespec.h
+    $ emacs timespec.h
+
+Once inside the header file, I modified the timespec_cmp function
+to have the functionality I described earlier, using comparisons
+to avoid overflow:
+
+timespec_cmp (struct timespec a, struct timespec b)
+{
+  int diff = a.tv_nsec - b.tv_nsec;
+  return (a.tv_sec > b.tv_sec) ? 1 : (a.tv_sec < b.tv_sec) ? -1 : diff;
+}
+
+As you can see, I modified the code such that it would return 1
+or -1 depending on whether one timestamp was greater than the
+other. If they are evaluated as equal, I then return the
+difference in nanoseconds to be more precise since doing so would
+likely not encounter the same issue of overflow.
+
+Now I can create the actual diff file using the diff command to
+compare changes between the original header file and the copy I
+modified. I added the -u flag so that the output text would be
+in a unified context.
+
+    $ touch lab4.diff
+    $ diff -u lib/timespec.h timespec.h > lab4.diff
+
+I also made sure to change the file path in the second line from
+timespec.h to lib/timespec.h so that the correct file would be patched:
+
+   --- lib/timespec.h      2005-09-21 23:05:39.000000000 -0700
+   +++ lib/timespec.h      2019-02-07 15:45:17.201657000 -0800
+
+I created a ChangeLog entry by navigating into the lab4.diff
+file and using 'C-x 4 a' and added the following description:
+
+2019-02-09  Kathy Douangpanya Daniels  <kathy@lnxsrv09.seas.ucla.edu>
+
+        * timespec.h (timespec_cmp): Replaced subtraction between
+        integers with direct comparison to avoid overflow causing
+        unwanted behavior in the program. Return 1 or -1 depending
+        on whether one timestamp is larger than the other and
+        return the difference in nanoseconds if the seconds are	
+        evaluated to be equal.
+
+--------------
+
+Now that I've created the patch, I can test it as I did before:
+
+    $ patch -p0 < lab4.diff
+    $ make
+
+I re-ran the commands that were on the spec to see what how the
+output would turn out:
+
+   $ tmp=$(mktemp -d)
+   $ cd $tmp
+   $ touch -d '1918-11-11 11:00 GMT' wwi-armistice
+   $ touch now
+   $ sleep 1
+   $ touch now1
+   $ TZ=UTC0 ~/coreutils-with-bug/src/ls -lt --full-time wwi-armistice now now1
+
+The output looks correct, so the patch worked!
+
+-rw-r--r-- 1 kathy eeugrad 0 2019-02-08 01:06:10.019670444 +0000 now1
+-rw-r--r-- 1 kathy eeugrad 0 2019-02-08 01:06:04.101569066 +0000 now
+-rw-r--r-- 1 kathy eeugrad 0 1918-11-11 11:00:00.000000000 +0000 wwi-armistice
+
+--------------
+
+Attempting to reproduce the problem in my home directory (on the
+SEASnet severs), I ran the following commands:
+
+   $ cd
+   $ mkdir tmp
+   $ cd tmp
+   $ touch -d '1918-11-11 11:00 GMT' wwi-armistice
+   $ touch now
+   $ sleep 1
+   $ touch now1
+   $ TZ=UTC0 ls -lt --full-time wwi-armistice now now1
+
+The following output was the result:
+
+-rw-r--r-- 1 kathy eeugrad 0 2054-12-17 17:28:16.000000000 +0000 wwi-armistice
+-rw-r--r-- 1 kathy eeugrad 0 2019-02-08 01:13:31.408442000 +0000 now1
+-rw-r--r-- 1 kathy eeugrad 0 2019-02-08 01:13:25.451889000 +0000 now
+
+As we can see, the SEASnet servers have a bug! The timestamp for
+wwi-armistice displays as made in the year 2054 even though I set
+it to be 1918. The reason why this occurs is due to the Unix epoch,
+or Unix time; it keeps time as the number of seconds that have
+elapsed since January 1st, 1970. As a result of this, times earlier
+than the epoch are negative, the epoch is zero, and times later
+are positive.
+
+Unix time is usually represented using 32-bit unsigned integers, so
+since it is unable to represent negative timestamps, or times earlier
+than the epoch (in this case 1918), it wraps around and leads to a
+positive, future time of 2054.

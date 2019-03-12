@@ -1,0 +1,30 @@
+Kathy Daniels
+404887687
+Assignment 9
+Homework - gitk
+----------------
+
+The top left window details each commit (including the commit messages)
+while also revealing the heirarchy of branches that have come from the
+master branch. They are also listed in chronological order from the 
+most recent commits being at the top to the oldest commits being towards
+the bottom.
+
+The top middle window details the name and email of each person that
+made the corresponding commit while the top right window details the
+exact date and time that the commit was done.
+
+Underneath all 3 windows in the center is a section that shows which row
+out of the total number of rows/commits you are currently viewing. For
+example, in the screenshot I took, I was viewing commit 14999 out of
+135143 total commits.
+
+The bottom left window shows more details about the commit, including the
+author, the ChangeLog message, and all the changes in diff format. If
+it was just a merge action to master as it was in the screenshot, it
+merely tells us it was a merge commit with no other changes listed.
+
+The bottom right window lists the files that were changed in the commit
+of interest. In the screenshot I took, there were no files listed since
+it was a merge commit, but it other commits with file changes, there
+are 1 or more files listed.

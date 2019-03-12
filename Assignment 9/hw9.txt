@@ -1,0 +1,145 @@
+Kathy Daniels
+404887687
+Assignment 9
+Homework
+--------------
+
+1)
+
+I created this file hw9.txt to log each step of the homework:
+
+  $ emacs hw9.txt
+
+2)
+
+To check out version 3.0 of Diffutils from my repository into
+a new branch named "quote", I ran:
+
+  $ cd diffutils
+  $ git checkout v3.0 -b quote
+  M src/cmp.c
+  M src/diff.c
+  M src/diff3.c
+  M src/dir.c
+  M src/sdiff.c
+  M src/util.c
+  Switched to a new branch 'quote'
+
+3) 
+
+I installed my change into this new branch by running:
+
+  $ patch -p1 < quote-3.0-patch.txt
+
+The patch seemed to be applied without any errors.
+
+4)
+
+I learned how to use the Emacs function add-change-log-entry-other-window.
+
+C-x 4 a : adds a new entry to the change log file for the file
+      	  you are editing
+
+5)
+
+I composed an appropiate ChangeLog entry for my patch by adapting
+the change log from the quote-patch.txt using the
+add-change-log-entry-other-window Emacs function:
+
+  $ emacs quote-3.0-patch.txt
+  C-x 4 a
+
+2019-03-12  Kathy Douangpanya Daniels  <kathy@lnxsrv09.seas.ucla.edu>
+
+        * quote-3.0-patch.txt: This patch was created in response
+        to a recent change in the GNU coding standards, which now
+        suggests quoting 'like this' or "like this", instead of
+        `like this' or ``like this". Note that these changes are
+        only applied to character string constants in .c files.
+
+  C-x C-s
+  C-x C-c
+
+6)
+
+I then committed my changes to the new branch using the ChangeLog
+entry as the commit message:
+
+  $ mv quote-3.0-patch.txt ..
+  $ git add .
+  $ git commit -F ChangeLog
+
+7)
+
+I then generated a new patch file that should work without having
+to fix things by hand afterwards:
+
+  $ git format-patch -1 --stdout > formatted-patch.txt
+
+8)
+
+Next, my partner and I exchanged patches through email for testing.
+I moved this file onto the SEASnet server and into diffutils.
+To verify that my partner's patch works, I checked out version 3.0
+again into a new temporary branch and applied her patch:
+
+  $ git checkout v3.0 -b quote-2
+  $ git am < nikki-formatted-patch.txt
+  $ ./bootstrap
+  $ ./configure
+  $ make
+  $ make check
+
+As before, I recieved no error, along with a message telling me that
+all 88 tests successfully passed!
+
+I tested the following commands again:
+
+  $ src/diff . -
+  src/diff: cannot compare '-' to a directory
+
+  $ src/diff --help
+  
+Examining the lengthy output for lines that are supposed to contain
+' instead of `, I could see that the patch was successful! Here
+are a few examples:
+
+  LTYPE is 'old', 'new', or 'unchanged'.  GTYPE is LTYPE or 'changed'.
+
+  -l  --paginate  Pass the output through 'pr' to paginate it.
+
+  FILES are 'FILE1 FILE2' or 'DIR1 DIR2' or 'DIR FILE...' or 'FILE... DIR'.
+
+  If a FILE is '-', read standard input.
+
+9)
+
+To verify that my ChangeLog entry works, I ran:
+
+  $ make distdir
+
+A new directory called diffutils-3.0.1-ac41 was created! I opened
+the directory and examined the ChangeLog file inside:
+
+  $ cd diffutils-3.0.1-ac41
+  $ emacs ChangeLog
+
+I could see that my partner's ChangeLog entry was at the top of the
+file, so we know that the ChangeLog entries worked.
+
+10)
+
+I logged out of the SEASnet server and logged back in using the -X
+flag to enable X forwarding:
+
+  $ ssh -X kathy@lnxsrv09.seas.ucla.edu
+
+I then went into the directory containing the copy of the GNU
+Emacs git repository's master branch and ran gitk on it:
+
+  $ cd ~eggert/src/gnu/emacs
+  $ gitk
+
+A window popped up soon after in XQuartz containing the repository.
+I scrolled down the long list of commits to find the newest merge
+that is no newer than 2015-01-25.

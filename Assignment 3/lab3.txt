@@ -1,0 +1,133 @@
+Kathy Daniels
+404887687
+Assignment 3
+Lab
+-------------
+
+(STEP 1)
+
+I first downloaded the Coreutils 8.29 source code and
+its signature into my home directory:
+
+  $ wget ftp://ftp.gnu.org/gnu/coreutils/coreutils-8.29.tar.xz
+  $ wget ftp://ftp.gnu.org/gnu/coreutils/coreutils-8.29.tar.xz.sig
+
+I downloaded the GNU keyring so that I could then verify
+the signature. The gpg command I use is an encryption and signing tool
+that uses the OpenPGP standard:
+
+  $ wget https://ftp.gnu.org/gnu/gnu-keyring.gpg
+  $ gpg --verify --keyring ./gnu-keyring.gpg coreutils-8.29.tar.xz.sig
+
+A warning message printed that states:
+
+  gpg: WARNING: This key is not certified with a trusted signature!
+  gpg:          There is no indication that the signature belongs to the owner.
+
+This warning should be normal since it clearly states that
+there is no proof that the signature belongs to the owner.
+
+-------------
+
+(STEP 2)
+
+Once I verified the signature, I untarred and unzipped the tarball:
+
+  $ tar -xJvf coreutils-8.29.tar.xz
+
+I created a directory named coreutilsInstall in my home
+directory in which I will install coreutils:
+
+  $ mkdir ~/coreutilsInstall
+
+I navigated into the coreutils-8.29 directory and read the INSTALL file
+on how to configure "make" and ran the configure script using the
+prefix flag so that coreutils would be installed in the directory
+I detailed above (~/coreutilsInstall):
+
+  $ cd coreutils-8.29
+  $ emacs INSTALL
+  $ ./configure --prefix=/u/ee/ugrad/kathy/coreutilsInstall
+
+Next, I compiled and installed coreutils. The make command
+compiles the program and creates exectuable files while the
+make install command installs coreutils into ~/coreutilsInstall:
+
+  $ make
+  $ make install
+
+I didn't run into any problems during this step.
+
+-------------
+
+(STEP 3)
+
+I then reproduced the bug on my machine using the unmodified
+version of coreutils. Justing running 'ls' won't produce the
+results I want because the shell looks for /bin/ls, so I used
+./bin/ls instead to manually run the exectuable in the appropiate
+directory:
+
+  $ cd ~/coreutilsInstall
+  $ ./bin/ls -a -A
+
+The result was the expected buggy output which produced four lines
+instead of two lines:
+
+    .  ..  bin  libexec  share
+
+-------------
+
+(STEP 4)
+
+To apply the patch of Bug #30963 Message #10, I created a file named
+bug_patch and copied over the patch code:
+
+  $ cd ../coreutils-8.29
+  $ emacs patch_file
+  (Copied and pasted the patch) 
+  $ man patch
+  $ patch -p1 < patch_file
+
+I used the -p1 flag to modify the file paths in the patch code
+since I did not have directories 'a' and 'b' although they were
+referred to in the patch file. 
+
+The only error I recieved was as follows:
+
+    1 out of 1 hunk FAILED -- saving rejects to file NEWS.rej
+
+However, the message also said that src/ls.c was successfully
+patched so I checked that the patch was actually applied:
+
+  $ emacs src/ls.c
+    X-s case 'A'
+
+Under case 'A', it said 'ignore_mode = IGNORE_DOT_AND_DOTDOT;'
+So the patch was applied!
+
+-------------
+
+(STEP 5)
+
+Now I can rebuild ls.c using the make command.
+This compiles the program code and creates new exectuables
+in the current directory:
+
+  $ make
+
+I did not run make install because it would copy the executables
+into the temporary directory I created earlier ~/coreutilsInstall
+which the assignment mentioned to avoid. 
+  
+-------------
+
+(STEP 6)
+
+To make sure that my changes actually fixed the bug, I tested
+it out in the src file containing ls.c:
+
+  $ cd src
+  $ ./ls -a -A
+
+It looks like . and .. were not printed, so the patch was successful!

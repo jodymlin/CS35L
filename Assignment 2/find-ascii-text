@@ -1,0 +1,9 @@
+#!/bin/bash
+# Kathy Daniels
+# 404887687
+# find-ascii-text
+
+export LC_ALL='C'
+
+# recursively search for files that do not contain non-ascii characters
+find $@ -type f -exec grep -PL "[^\x01-\x7F]" '{}' +

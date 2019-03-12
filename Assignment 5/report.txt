@@ -1,0 +1,226 @@
+Kathy Daniels
+404887687
+Assignment 5
+--------------
+
+===================================================================
+			    lab.txt
+===================================================================
+
+1.
+
+I first wrote a C transliteration program tr2b.c that uses
+getchar and putchar to transliterate bytes. I checked for
+the correct number of arguments (3), matching string lengths,
+and for duplicates. The method I implemented used a character
+array (or a map) of size 256, mapping every character byte
+in 'from' to every corresponding character byte in 'to'.
+
+When collecting input, I checked if the current character byte
+had a mapped value. If not, the program should output the
+original input. If yes, the program should output the mapped
+character found in the large character array.
+
+--------------
+
+2.
+
+I wrote another C transliteration program tr2u.c that uses
+read and write instead of getchar and putchar to transliterate
+bytes. I still performed the same checks as previously
+mentioned, and also implemented it using the same character
+array. However, I read in and wrote out characters directly
+through system calls.
+
+--------------
+
+3.
+
+I used the strace command to compare system calls issued by
+tr2b and tr2u commands. I created a file that was at least
+5,000,000 bytes to test this:
+
+  $ head --bytes=5000000 /dev/urandom > testfile.txt
+
+First, I compared the system calls when copying one file to
+another. To do so, I used the 'c' option as follows:
+
+  $ strace -c ./tr2b 'A' 'X' < testfile.txt > output1.txt
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 27.27    0.000051           6         9           mmap
+ 16.58    0.000031           8         4           mprotect
+ 10.16    0.000019           5         4           fstat
+  9.09    0.000017          17         1           brk
+  8.02    0.000015           8         2           open
+  7.49    0.000014          14         1           write
+  6.95    0.000013           7         2           read
+  5.88    0.000011          11         1           munmap
+  3.74    0.000007           7         1         1 access
+  3.21    0.000006           3         2           close
+  1.60    0.000003           3         1           arch_prctl
+  0.00    0.000000           0         1           execve
+------ ----------- ----------- --------- --------- ----------------
+100.00    0.000187                    29         1 total
+
+As you can see, there were 29 system calls for tr2b.
+
+  $ strace -c ./tr2u 'A' 'X' < testfile.txt > output2.txt
+
+% time     seconds  usecs/call     calls    errors syscall
+------ ----------- ----------- --------- --------- ----------------
+ 55.11   21.234223           4   5000000           write
+ 44.89   17.294951           3   5000002           read
+  0.00    0.000000           0         2           open
+  0.00    0.000000           0         2           close
+  0.00    0.000000           0         2           fstat
+  0.00    0.000000           0         7           mmap
+  0.00    0.000000           0         4           mprotect
+  0.00    0.000000           0         1           munmap
+  0.00    0.000000           0         1           brk
+  0.00    0.000000           0         1         1 access
+  0.00    0.000000           0         1           execve
+  0.00    0.000000           0         1           arch_prctl
+------ ----------- ----------- --------- --------- ----------------
+100.00   38.529174              10000024         1 total
+
+We see here that there were 10000024 system calls for tr2u. tr2u
+clearly has a much larger amount of calls than tr2b since it
+requires many individual read and write calls for each of the
+5,000,000 bytes.
+
+I next compared the system calls when copying a file to terminal.
+I used the same commands but just didn't pipe it into a separate
+output file.
+
+  $ strace -c ./tr2b 'A' 'X' < testfile.txt
+  $ strace -c ./tr2u 'A' 'X' < testfile.txt
+
+Again, I recieved 29 system calls for tr2b and 10000024 system calls
+for tr2u. We expect this since tr2b uses buffered I/O, so less
+system calls are needed to gather the same desired input. This also
+leads tr2b to be a much faster program, confirmed below.
+
+--------------
+
+4.
+
+To compare the speed of each program, I used the time command. I
+first timed them in the context of copying one file to another:
+
+  $ time ./tr2b 'A' 'X' < testfile.txt > output1.txt
+
+  real	 0m0.004s
+  user	 0m0.001s
+  sys	 0m0.000s
+
+  $ time ./tr2u 'A' 'X' < testfile.txt > output2.txt
+
+  real	 0m10.164s
+  user	 0m1.266s
+  sys	 0m8.854s
+
+I then timed them again in the context of copying a file to the
+terminal:
+
+  $ time ./tr2b 'A' 'X' < testfile.txt
+
+  real	 0m0.002s
+  user	 0m0.001s
+  sys	 0m0.000s
+
+  $ time ./tr2u 'A' 'X' < testfile.txt
+
+  real	 0m9.116s
+  user	 0m1.173s
+  sys	 0m7.932s
+
+As we can see, tr2u is a lot slower than tr2b in copying the same
+files. tr2b barely took any time to finish while tr2u took up to
+10.162 seconds. Again, this is what we would expect since tr2b
+uses buffered I/O so it makes less calls and reduces overhead while
+the unbuferred I/O implementation causes tr2u to spend a lot of
+extra time reading and writing every byte.
+
+===================================================================
+			    report.txt
+===================================================================
+
+To estimate the number of comparisons as a function of input lines,
+I ran sfrobu on inputs of varying numbers of input lines
+including 10, 100, 1000 and 10000. I added a global variable to keep
+track of every instance frobcmp was called in the program and printed
+it at the end:
+
+# of Lines  ||  # of Comparisons
+================================
+10          ||  175    
+100	    ||  2880
+1000        ||  40352
+10000       ||  521345
+
+If we represent the number of input lines as variable N, the number of
+comparison calls can be roughly estimated by:
+
+   comparisons = 4*Nlog(N)
+
+   40log(10) = ~133
+   400log(100) = ~2660
+   4000log(1000) = ~39960
+   40000log(10000) = ~531500
+
+The big O complexity of quicksort is also Nlog(N), so it makes sense
+here that our function closely matches Nlog(N) since our implementation
+utilizes quicksort.
+
+I then used the time command to measure the difference in performance
+between sfrob, sfrobu, sfrobu -f, and sfrobs -f. I again tested the
+programs using the large file containing 5,000,000 bytes from earlier:
+
+  $ time ./sfrob < testfile.txt > output.txt
+  $ time ./sfrobu < testfile.txt > output.txt
+  $ time ./sfrobu -f < testfile.txt > output.txt
+  $ time ./sfrobs < testfile.txt > output.txt
+  $ time ./sfrobs -f < testfile.txt > output.txt
+
+----- sfrob -----
+
+real  0m0.371s
+user  0m0.306s
+sys   0m0.015s
+
+---- sfrobu -----
+
+real 0m7.393s
+user 0m0.714s
+sys  0m6.636s
+
+--- sfrobu -f ---
+
+real  0m6.466s
+user  0m0.669s
+sys   0m5.752s
+
+---- sfrobs -----
+
+real  0m0.080s
+user  0m0.018s
+sys   0m0.032s
+
+--- sfrobs -f ---
+
+real  0m0.087s
+user  0m0.026s
+sys   0m0.026s
+
+As we can see from the various time outputs, sfrob and sfrobs 
+run a lot faster than sfrobu. sfrobu uses the unbuffered I/O
+implementation which slows down performance through the 
+countless system calls to read and write every single byte.
+This increases overhead a lot more for extremely large files
+like the one I tested with 5,000,000 bytes. sfrobs is also
+clearly the fastest program out of all of them because using
+bash is much more efficient than using c to create the program.
+sfrobs only contains about 20 lines of code with some mapped
+values while sfrobu and sfrob contain over 200 lines of code.

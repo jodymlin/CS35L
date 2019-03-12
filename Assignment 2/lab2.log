@@ -1,0 +1,190 @@
+Kathy Daniels
+404887687
+Assignment 2
+Lab
+-------------
+
+I first ran the shell command locale
+which did NOT output LC_CTYPE="C".
+
+I then ran the command export LC_ALL='C' 
+which sets the environment to the default locale.
+
+-------------
+
+I created a text file named words containing a sorted list of
+the contents in the file /usr/share/dict/words by
+running the following command:
+
+  $ sort /usr/share/dict/words >words
+
+-------------
+
+I created a text file containing the HTML of
+the assignment's web page by running the following command:
+
+  $ wget https://web.cs.ucla.edu/classes/winter19/cs35L/assign/assign2.html
+
+-------------
+
+I ran the following command:
+
+  $ tr -c 'A-Za-z' '[\n*]' <assign2.html
+
+This command takes the contents within the assign2.html file
+and only outputs characters that are between A through
+Z or a through z (alphabetic characters), printing new lines
+for every character that isn't alphabetic. This is
+done with -c which finds anything that is NOT A through Z or
+a through z, replacing it with a newline.
+
+I ran the following command:
+
+  $ tr -cs 'A-Za-z' '[\n*]' <assign2.html
+
+This command does something similar to the previous where
+only alphabetic characters are output, except reptitions
+of newline between words are reduced to only one newline
+between each word. This is done through -s which replaces
+the input sequence of a repeated character with
+a single occurence of the character.
+
+I ran the following command:
+
+  $ tr -cs 'A-Za-z' '[\n*]' <assign2.html | sort
+
+This command does what the last command does, except it
+also alphabetically sorts the ouptut of characters that are
+within range of A through Z or a through z found in the
+assign2.html file. It does this by piping the resulting
+output of the left side of the '|' character and sorting it
+with the sort command on the right side.
+
+I ran the following command:
+
+  $ tr -cs 'A-Za-z' '[\n*]' <assign2.html | sort -u
+
+This command only outputs unique string values out of the
+alphabetically sorted list of characters within range of 
+A-Z or a-z that was output by the previous command.
+This is achieved by the -u specification which can also be
+written as --unique which checks for strict ordering.
+
+I ran the following command:
+
+  $ tr -cs 'A-Za-z' '[\n*]' <assign2.html | sort -u | comm - words
+
+This command uses the comm command to compare the
+alphabetically sorted output of the assign2.html file with the
+alphabetically sorted list of strings in the words file, 
+producing a three-column output. The first column displays
+strings unique to the sorted alphabetic characters of assign2.html,
+the second column displays strings unique to
+the words file, and the third column displays lines common
+to both files (in this case the third column is empty
+since the files lack any common lines).
+
+I ran the following command:
+
+  $ tr -cs 'A-Za-z' '[\n*]' <assign2.html | sort -u | comm -23 - words
+
+This command suppresses the output of the second and
+third columns that would nnormally display lines unique to the
+words file and lines common to both assign2.html and words and
+only outputs the first column which shows the lines
+that are unique only to the alphabetically sorted ouptut
+from assign2.html.
+
+-------------
+
+I ran the following command to download a copy of the
+web page containing the simple Hawaiian dictionary:
+
+  $ wget http://mauimapp.com/moolelo/hwnwdseng.htm
+
+-------------
+
+I wrote a shell script buildwords.sh that
+automated the systematic rules:
+
+  $ touch buildwords
+
+-------------
+
+#! /bin/bash
+
+# buildwords                                                           
+# automate systematic rules used to extract                                    
+# hawaiian words from table dictionary                                         
+
+# search for lines containing Hawaiian words                                  
+grep -E '<td>.+</td>' $@ |
+sed '1~2d' |
+
+# remove all tags                                                              
+sed 's/<[^>]*>//g' |
+
+# treat ASCII grave accent like ASCII apostrophe                               
+sed "s/\`/\'/g" |
+
+# treat upper case letters like lower case letters                             
+tr [:upper:] [:lower:] |
+
+# treat entries with spaces/commas as multiple words                           
+tr ',' '\n' | tr ' ' '\n' |
+
+# delete all leftover white spaces                                             
+sed '/^$/d' |
+
+# check for non-Hawaiian letters                                               
+sed "/[^pk/'mnwlhaeiou]/d" |
+
+# sort list of words & remove duplicates                                       
+sort -u
+
+-------------
+
+I ran the script on the web page to create the
+hawaiian dictionary file (first giving it executable permission):
+
+  $ chmod +x buildwords
+  $ cat hwnwdseng.htm | ./buildwords | less > hwords
+
+------------
+
+To check my work, I ran a Hawaiian spell checker on
+the Hawaiian dictionary file itself (hwords) first:
+
+   $ tr [:upper:] [:lower:] <hwords | tr -cs "pk\'mnwlhaeiou" '[\n*]' |
+     sort -u | comm -23 - hwords | wc -w
+
+   OUTPUT: 0
+
+I then ran the Hawaiian spell checker on the assignment's web page:
+
+   $ tr [:upper:] [:lower:] <assign2.html | tr -cs "pk\'mnwlhaeiou" '[\n*]' |
+     sort -u | comm -23 - hwords > hmispelled
+   $ wc -w <hmispelled
+
+   OUTPUT: 216
+
+I also ran an English spell checker on the
+assignment's web page as done earlier:
+
+  $ tr -cs 'A-Za-z' '[\n*]' <assign2.html | sort -u |
+    comm -23 - words > emispelled 
+  $ wc -w <emispelled
+
+  OUTPUT: 87
+
+-------------
+
+Examples of words that are "misspelled" as English, but not as Hawaiian: 
+zero
+wiki
+lau
+
+Examples of words that are misspelled as Hawaiian but not as English:
+ample
+plea
+open
